@@ -1,36 +1,50 @@
-import axios from 'axios'
+// node --version # Should be >= 18
+// npm install @google/generative-ai
 
-const API_BASE_URL = 'https://api.gemini.com/v1'
+import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } from '@google/generative-ai'
 
-// GET request
-async function get(endpoint: string, params?: object) {
-  try {
-    const response = await axios.get(`${API_BASE_URL}/${endpoint}`, { params })
-    return response.data
-  } catch (error) {
-    console.error('GET request failed:', error)
-    throw error
+const MODEL_NAME = 'gemini-1.0-pro'
+const API_KEY = 'AIzaSyBXBc9r5jRavHv65Me_cRgi9VeVceqXuO8'
+
+export default async function runChat(question: string) {
+  const genAI = new GoogleGenerativeAI(API_KEY)
+  const model = genAI.getGenerativeModel({ model: MODEL_NAME })
+
+  const generationConfig = {
+    temperature: 0.9,
+    topK: 1,
+    topP: 1,
+    maxOutputTokens: 2048
   }
-}
 
-// POST request
-async function post(endpoint: string, data: object) {
-  try {
-    const response = await axios.post(`${API_BASE_URL}/${endpoint}`, data)
-    return response.data
-  } catch (error) {
-    console.error('POST request failed:', error)
-    throw error
-  }
-}
+  const safetySettings = [
+    {
+      category: HarmCategory.HARM_CATEGORY_HARASSMENT,
+      threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE
+    },
+    {
+      category: HarmCategory.HARM_CATEGORY_HATE_SPEECH,
+      threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE
+    },
+    {
+      category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
+      threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE
+    },
+    {
+      category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
+      threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE
+    }
+  ]
 
-// DELETE request
-async function del(endpoint: string) {
-  try {
-    const response = await axios.delete(`${API_BASE_URL}/${endpoint}`)
-    return response.data
-  } catch (error) {
-    console.error('DELETE request failed:', error)
-    throw error
-  }
+  const chat = model.startChat({
+    generationConfig,
+    safetySettings,
+    history: []
+  })
+
+  const result = await chat.sendMessage(question)
+  const response = result.response
+  console.log(response.text())
+
+  return response.text()
 }
